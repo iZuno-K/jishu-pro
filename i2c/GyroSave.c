@@ -22,7 +22,7 @@ int main(int argc, char **argv){
   int gyroData[3]; //(x,y,z)
   float x,y,z; //degree per seconds
   FILE *fp;
-  char *fname = "gyroData.csv"
+  char *fname = "gyroData.csv";
 
 
   printf("i2c Gyro(L3GD20) test program\n");
@@ -53,7 +53,7 @@ int main(int argc, char **argv){
     //データを校正して表示
     x = (float)gyroData[0]*0.00875;
     y = (float)gyroData[1]*0.00875;
-    z = (float)gyroData[2]*0.00875);
+    z = (float)gyroData[2]*0.00875;
     printf("(x, y, z) time = (%5.2f, %5.2f, %5.2f) \n", x,y,z);
     fprintf(fp, "%5.2f, %5.2f, %5.2f\n", x,y,z);
     delay(1);
