@@ -46,7 +46,7 @@ int main(int argc, char **argv){
   int i;
   gettimeofday(&startTime, NULL);     // 開始時刻取得
 
-  for (i=0;i<40;i++){
+  for (i=0;i<100;i++){
     L3GD20_readData(gyroData, i2c_fd);
     gettimeofday(&endTime, NULL);       // 終了時刻取得
     time_t diffsec = difftime(endTime.tv_sec, startTime.tv_sec);    // 秒数の差分を計算
@@ -55,7 +55,7 @@ int main(int argc, char **argv){
     //データを校正して表示
     printf("(x, y, z) time = (%5.2f, %5.2f, %5.2f) %5.6f\n",
     (float)gyroData[0]*0.00875, (float)gyroData[1]*0.00875, (float)gyroData[2]*0.00875), realsec;
-    //delay(100)
+    delay(1)
   }
   return;
 }
