@@ -55,7 +55,7 @@ int main(int argc, char **argv){
     //データを校正して表示
     printf("(x, y, z) time = (%5.2f, %5.2f, %5.2f) %5.6f\n",
     (float)gyroData[0]*0.00875, (float)gyroData[1]*0.00875, (float)gyroData[2]*0.00875), realsec;
-    delay(1)
+    delay(1);
   }
   return;
 }
