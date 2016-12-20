@@ -10,8 +10,7 @@
 #include <stdint.h>
 #include <wiringPi.h> //delay関数用
 
-#include <time.h>
-#include <sys/time.h>
+// #include <sys/time.h>
 
 void L3GD20_readData(int *gyroData, int fd);
 void L3GD20_write(unsigned char address, unsigned char data, int fd);
@@ -24,9 +23,9 @@ int main(int argc, char **argv){
   char* i2cFileName = "/dev/i2c-1";//リビジョンに合わせて変更
   int i2cAddress = 0x6a;
   int gyroData[3]; //(x,y,z)
-  time_t t1,t2;
-  struct timeval startTime, endTime;  // 構造体宣言
-  double realsec;
+
+  // struct timeval startTime, endTime;  // 構造体宣言
+  // double realsec;
 
   printf("i2c Gyro(L3GD20) test program\n");
   delay(500);
@@ -44,14 +43,14 @@ int main(int argc, char **argv){
   L3GD20_init(i2c_fd);
   //１秒毎,２０回センサ情報取得
   int i;
-  gettimeofday(&startTime, NULL);     // 開始時刻取得
+  // gettimeofday(&startTime, NULL);     // 開始時刻取得
 
   for (i=0;i<100;i++){
     L3GD20_readData(gyroData, i2c_fd);
-    gettimeofday(&endTime, NULL);       // 終了時刻取得
-    time_t diffsec = difftime(endTime.tv_sec, startTime.tv_sec);    // 秒数の差分を計算
-    suseconds_t diffsub = endTime.tv_usec - startTime.tv_usec;      // マイクロ秒部分の差分を計算
-    realsec = diffsec+diffsub*1e-6; // 実時間を計算
+    // gettimeofday(&endTime, NULL);       // 終了時刻取得
+    // time_t diffsec = difftime(endTime.tv_sec, startTime.tv_sec);    // 秒数の差分を計算
+    // suseconds_t diffsub = endTime.tv_usec - startTime.tv_usec;      // マイクロ秒部分の差分を計算
+    // realsec = diffsec+diffsub*1e-6; // 実時間を計算
     //データを校正して表示
     printf("(x, y, z) time = (%5.2f, %5.2f, %5.2f) %5.6f\n",
     (float)gyroData[0]*0.00875, (float)gyroData[1]*0.00875, (float)gyroData[2]*0.00875), realsec;
