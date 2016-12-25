@@ -1,4 +1,4 @@
-// gcc -o i2cGyro i2cGyro.c -lwiringPi
+// gcc -o i2cAccel i2cAccel.c -lwiringPi
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -11,10 +11,16 @@
 #include <wiringPi.h> //delay関数用
 
 void readData(int *accelData, int fd);
-void writeData(unsigned char address, unsigned char data, int fd);
+void adxl345_write(unsigned char address, unsigned char data, int fd);
 unsigned char adxl345_read(unsigned char address, int fd);
 void adxl345_init(int fd);
 
+//各レジスタ
+#define BW_RATE     0x2c
+#define POWER_CTL   0x2d
+#define INT_SOURCE  0x30
+#define DATA_FORMAT 0x31
+#define DATAX0      0x32
 
 int main(int argc, char **argv){
   int i2c_fd; //i2cへのファイルディスクプタ
@@ -35,8 +41,8 @@ int main(int argc, char **argv){
     exit(1);
   }
   //デバイス初期化
-  // adxl345_init(i2c_fd);
-  //１秒毎,２０回センサ情報取得
+  adxl345_init(i2c_fd);
+
   int i;
   for (i=0;i<40;i++){
     readData(accelData, i2c_fd);
@@ -50,7 +56,7 @@ int main(int argc, char **argv){
 
 
 //adxl345用１byte書き込みルーチン:addressで示すレジスタにdataを書き込む
-void writeData(unsigned char address, unsigned char data, int fd){
+void adxl345_write(unsigned char address, unsigned char data, int fd){
   unsigned char buf[2];
   buf[0] = address;
   buf[1] = data;
@@ -85,7 +91,7 @@ void readData(int *accelData, int fd){
   //センサから３軸に対して２バイトずつデータを読み出す
   int i;
   for (i=0;i<6;i++){
-    data[i] = adxl345_read(0x28+i,fd);
+    data[i] = adxl345_read(0x32+i,fd);
   }
   //各数値をint型に整形する
   //センサの値が16bitかつ２の補数表現の出力のため、bitシフトで加工
@@ -104,25 +110,15 @@ void readData(int *accelData, int fd){
 void adxl345_init(int fd){
   unsigned char data;
   printf("adxl345 initialize seqence start\n");
-  //adxl345はレジスタ0x0fに常に0xd4がセットされている仕様なので
-  //それを利用して通信チェックする
-  data = adxl345_read(0x0f, fd);
-  if (data != 0xd4){
-    printf("adxl345 is not working\n");
-    exit(1);
-  }
+  //adxl345のPOWER_CTLをMeasureモードに
+  adxl345_write(POWER_CTL, 0x08, fd);
   delay(10);
-  //レジスタへの書き込みチェックとイニシャライズを同時に行う
-  printf("read OK. Now writing check ...\n");
-  //0x20に0x0fを書き込むことでパワーオン。動作可能に
-  writeData(0x20, 0x0f, fd);
-  //0x20に正しく0x0fが書き込まれたか確認
-  data = adxl345_read(0x20, fd);
-  if (data != 0x0f){
-    printf("writing error\n");
-    exit(1);
-  }
-  printf("Working OK\n");
+  //測定範囲±16g
+  adxl345_write(DATA_FORMAT, 0x03, fd);
   delay(10);
+  //サンプリング周波数adxl345.h参照
+  adxl345_write(BW_RATE, 0x0A, fd);
+  delay(10);
+  printf("adxl345 initialize seqence finish\n");
   return;
 }
