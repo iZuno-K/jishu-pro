@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <wiringPi.h> //delay関数用
 
 #include "i2c.h"
 #include "adxl345.h"
@@ -47,7 +48,7 @@ void adxl345_init(int fd){
   printf("adxl345 initialize seqence start\n");
   //adxl345のPOWER_CTLをMeasureモードに
   i2c_write(POWER_CTL, 0x08, fd);
-  delay(10);sudo
+  delay(10);
   //測定範囲±16g
   i2c_write(DATA_FORMAT, 0x03, fd);
   delay(10);
