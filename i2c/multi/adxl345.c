@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "i2c.h"
+#include "adxl345.h"
 
 //各レジスタ
 #define BW_RATE     0x2c

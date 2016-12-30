@@ -9,6 +9,8 @@
 #include <sys/ioctl.h>
 #include <stdint.h>
 
+#include "i2c.h"
+
 //i2c用１byte書き込みルーチン:addressで示すレジスタにdataを書き込む
 void i2c_write(unsigned char address, unsigned char data, int fd){
   unsigned char buf[2];

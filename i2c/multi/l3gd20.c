@@ -10,6 +10,7 @@
 #include <stdint.h>
 
 #include "i2c.h"
+#include "l3gd20.h"
 
 //L3GD20用ジャイロデータ読み出し用ルーチン
 //整数値配列へのポインタを使ってデータを読みだす
