@@ -13,16 +13,16 @@
 
 
 //i2cデバイスファイルオープン
-void i2c_open(int i2c_fd, char *i2cFileName) {
-  if ((i2c_fd = open(i2cFileName, O_RDWR)) < 0){
+void i2c_open(int *i2c_fd, char *i2cFileName) {
+  if ((*i2c_fd = open(i2cFileName, O_RDWR)) < 0){
     printf("Failed to open i2c port\n");
     exit(1);
   }
 }
 
 //スレーブアドレス設定
-void i2c_setAddress(int i2c_fd, int i2c_Address) {
-  if ((ioctl(i2c_fd, I2C_SLAVE, i2cAddress)) < 0) {
+void i2c_setAddress(int *i2c_fd, int i2c_Address) {
+  if ((ioctl(*i2c_fd, I2C_SLAVE, i2c_Address)) < 0) {
     printf("Unable to get bus access to talk to slave\n");
     exit(1);
   }

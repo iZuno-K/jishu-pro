@@ -23,25 +23,25 @@ int main(){
   float x1,y1,z1,x2,y2,z2;
 
   //i2cデバイスファイルオープン
-  i2c_open(i2c_fd, i2cFileName);
+  i2c_open(&i2c_fd, i2cFileName);
 
   //スレーブアドレス設定
   //L3GD20
   i2cAddress[0] = L3GD20_ADDRESS;
-  i2c_setAddress(i2c_fd, i2cAddress[0]);
+  i2c_setAddress(&i2c_fd, i2cAddress[0]);
   L3GD20_init(i2c_fd);
 
   //adxl345
   i2cAddress[1] = ADXL345_ADDRESS;
-  i2c_setAddress(i2c_fd, i2cAddress[1]);
+  i2c_setAddress(&i2c_fd, i2cAddress[1]);
   adxl345_init(i2c_fd);
 
   //スレーブアドレスをセットしてから読むこと
   int i;
   for (i=0; i< 100; i++) {
-    i2c_setAddress(i2c_fd, i2cAddress[0]);
+    i2c_setAddress(&i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
-    i2c_setAddress(i2c_fd, i2cAddress[1]);
+    i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
 
     printf("(%5.2f, %5.2f, %5.2f)\n", gyroData[0],gyroData[1],gyroData[2]);
