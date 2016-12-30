@@ -44,8 +44,8 @@ int main(){
     adxl345_readData(accelData, i2c_fd);
 
     printf("(%5.2f, %5.2f, %5.2f)\n", gyroData[0],gyroData[1],gyroData[2]);
-    printf("(%5.2f, %5.2f, %5.2f)\n", accelData[0],accelData[1],accelData[2]);
-    delay(10);
+    printf("(%5.2fg, %5.2fg, %5.2fg)\n", accelData[0],accelData[1],accelData[2]);
+    delay(100);
   }
 
   return 0;
