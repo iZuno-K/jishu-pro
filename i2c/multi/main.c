@@ -19,7 +19,7 @@ int main(){
   char *i2cFileName = "/dev/i2c-1"; //リビジョンに合わせてかえること
   int i2cAddress[2];
   float gyroData[3]; //(x,y,z)
-  int accleData[3]; //(x,y,z)
+  int accelData[3]; //(x,y,z)
   float x1,y1,z1,x2,y2,z2;
 
   //i2cデバイスファイルオープン
@@ -37,7 +37,8 @@ int main(){
   adxl345_init(i2c_fd);
 
   //スレーブアドレスをセットしてから読むこと
-  for (int i=0, i< 100) {
+  int i;
+  for (i=0; i< 100; i++) {
     i2c_setAddress(i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
     i2c_setAddress(i2c_fd, i2cAddress[1]);
