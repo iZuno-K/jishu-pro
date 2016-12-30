@@ -1,15 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 
-#define L3GD20_ADRESS 0x6a
-#define ADXL345_ADRESS 0x53
+#include <linux/i2c-dev.h> //I2C用インクルード
 
 #include "adxl345.h"
 #include "l3gd20.h"
 
+#define L3GD20_ADRESS 0x6a
+#define ADXL345_ADRESS 0x53
+
 int main(){
   int i2c_fd; //i2cへのファイルディスクリプタ
-  char *FileName = "dev/i2c-1" //リビジョンに合わせてかえること
+  char *FileName = "dev/i2c-1"; //リビジョンに合わせてかえること
   int i2cAddress;
   int gyroData[3]; //(x,y,z)
   float x1,y1,z1,x2,y2,z2;
