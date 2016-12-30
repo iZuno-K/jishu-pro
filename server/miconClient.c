@@ -12,7 +12,9 @@
 
 #include "defs.h"
 
-#include "opencv2/opencv.hpp"
+//#include "opencv2/opencv.hpp"
+#include <cv.h>
+#include <highgui.h>
 
 static int g_socket;//このクライアントのソケット
 
@@ -64,9 +66,7 @@ socket_close()
 //-----------------------------------------------------------------------------------
 // socket_read
 //-----------------------------------------------------------------------------------
-int
-socket_read( int socket, void* buf, int buf_size )
-{
+int socket_read( int socket, void* buf, int buf_size ) {
   int size;
   int left_size = buf_size;
   char* p = (char*) buf;
@@ -88,9 +88,7 @@ socket_read( int socket, void* buf, int buf_size )
 //-----------------------------------------------------------------------------------
 // socket_write
 //-----------------------------------------------------------------------------------
-int
-socket_write( int socket, void* buf, int buf_size )
-{
+int socket_write( int socket, void* buf, int buf_size ) {
   int size;
   int left_size = buf_size;
   char* p = (char*) buf;
@@ -112,22 +110,21 @@ socket_write( int socket, void* buf, int buf_size )
 //-----------------------------------------------------------------------------------
 // send_sock
 //-----------------------------------------------------------------------------------
-void*
-thread_send(void *arg)
+void* thread_send(void *arg)
 {
   char buf[1024];
+  int size;
   printf("chat start\n");
 
   while(1){
     fgets(buf, sizeof(buf), stdin);
     buf[strlen(buf)-1] = '\0'; //改行文字消す
-    int size = strlen(buf)+1;
-
-    if ( strcmp(buf,"_logout") == 0 ) g_switch= 0;//for logout
-
+    size = strlen(buf)+1;
+    //データサイズを送信
     if (socket_write( g_socket, &size, sizeof(int) ) < 0){
       return NULL;
     }
+    //データを送信
     if (socket_write( g_socket, buf, size ) < 0){
       return NULL;
     }
@@ -139,12 +136,11 @@ thread_send(void *arg)
 //-----------------------------------------------------------------------------------
 // recv_sock
 //-----------------------------------------------------------------------------------
-void*
-thread_recv(void *arg)
-{
+void* thread_recv(void *arg) {
   char buf[1024];
   int size;
 
+  // 初めに画像サイズを受信しておく
   socket_read(g_socket, &g_width, sizeof(int) );
   socket_read(g_socket, &g_height, sizeof(int) );
   socket_read(g_socket, &g_depth, sizeof(int) );
@@ -153,25 +149,23 @@ thread_recv(void *arg)
 
   while(1){
 
-    if(g_switch){
-      socket_read(g_socket, &size, sizeof(int));
+    //受け取るデータのサイズを受信
+    socket_read(g_socket, &size, sizeof(int));
+    if( size > 0 ) {
       // ダミーではないとき
-      if( size > 0 ) {
-	socket_read(g_socket, buf, size );
-	printf("%s\n", buf);
+      socket_read(g_socket, buf, size );
+      printf("%s\n", buf);
 
-      } else {//画像受信
-	socket_read(g_socket, g_image_buf, g_width*g_height*(g_depth/8)*g_nChannel);
-	//image_buf, width*nChannel
-      }
-    } else{ //after input logout
-      socket_read(g_socket, &size, sizeof(int));
-      if (size == 0){
-	socket_read(g_socket, g_image_buf, size);
-	break;
-	  }
-      else socket_read(g_socket, buf, size );
+    } else if (size == 0){
+      //画像受信（サーバ側の設定で、画像を送るときはsize=0としている）
+      socket_read(g_socket, g_image_buf, g_width*g_height*(g_depth/8)*g_nChannel);
+      //image_buf, width*nChannel
     }
+    else {
+      //その他（エラー用）
+      break;
+    }
+
   }
   socket_close();
   return NULL;
@@ -198,13 +192,6 @@ void keyboard(unsigned char key, int x, int y)
 int
 main(int argc, char *argv[])
 {
-  int c;
-  cv::VideoCapture cap(0);//デバイスのオープン
-  if(!cap.isOpened()){//カメラデバイスが正常にオープンしたか確認．
-      //読み込みに失敗したときの処理
-      return -1;
-  }
-
   if(argc == 1){
     printf("usage: client <server IP address>\n");
     exit(1);

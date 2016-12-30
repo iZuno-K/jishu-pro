@@ -32,8 +32,8 @@ static pthread_mutex_t g_mutex;
 //-----------------------------------------------------------------------------------
 // socket_read
 //-----------------------------------------------------------------------------------
-int
-socket_read( int socket, void* buf, int buf_size )
+//socketから計buf_sizeバイト分のデータを読み、bufに書き込む
+int socket_read( int socket, void* buf, int buf_size )
 {
   int size;
   int left_size = buf_size;
@@ -43,21 +43,23 @@ socket_read( int socket, void* buf, int buf_size )
   // ループで読み込み続ける
   //---------------------------------------------------
   while( left_size > 0 ) {
+    //socketからleft_size(残りのサイズ）バイト読み取りｐに書き込む
     size = read(socket, p, left_size);
+    //読み込んだサイズ分アドレス（書き込む場所）をずらす
     p += size;
     left_size -= size;
 
     if( size <= 0 ) break;
-  }
+    }
 
-  return buf_size - left_size;
+    return buf_size - left_size;
 }
 
 //-----------------------------------------------------------------------------------
 // socket_write
 //-----------------------------------------------------------------------------------
-int
-socket_write( int socket, void* buf, int buf_size )
+//サイズがbuf_sizeバイトであるデータbufをsocketを通じて送る
+int socket_write( int socket, void* buf, int buf_size )
 {
   int s;
   int size;
@@ -72,44 +74,43 @@ socket_write( int socket, void* buf, int buf_size )
     p += size;
     left_size -= size;
 
-
+    // 全データ送信成功
     if( size == 0 ) break;
+    //送信失敗
     if( size <  0 ) {
       switch( errno ){
-      case EPIPE:
-        for(s = 0; s < client_num; s++) {
-          if ( socket_list[s] == socket ) {
-            int j;
-            for ( j = s; j < client_num-1; j++) {
-              socket_list[j] = socket_list[j+1];
+        //ソケットがクライアント側ですでにcloseされている場合
+        case EPIPE:
+          for(s = 0; s < client_num; s++) {
+            if ( socket_list[s] == socket ) {
+              int j;
+              for ( j = s; j < client_num-1; j++) {
+                socket_list[j] = socket_list[j+1];
+              }
+              client_num--;
             }
-            client_num--;
           }
+          printf("Disconnected : %d\n", socket);
+          return -1;
         }
-        printf("Disconnected : %d\n", socket);
-        return -1;
+        break;
       }
-      break;
     }
-  }
-
-  return buf_size - left_size;
+    return buf_size - left_size;
 }
 
 //-----------------------------------------------------------------------------------
 // comm：クライアントごとの送受信スレッド
 //-----------------------------------------------------------------------------------
-void*
-comm(void* arg)
-{
-    /* pthread_create(&thread, NULL, comm, (void*)&ns); で作成したスレッド
-       から、呼び出される */
+void* comm(void* arg) {
+  /* pthread_create(&thread, NULL, comm, (void*)&ns); で作成したスレッドから、呼び出される */
   int s = *(int *)arg;
   int size;
   char buf[1024];
   pthread_t char_thread;
   int new_client_index;
 
+  //このスレッドが終了するときに、このスレッド用に割り当てていたメモリなどのリソースを解放する
   pthread_detach(pthread_self());
 
   pthread_mutex_lock( &g_mutex );
@@ -123,38 +124,39 @@ comm(void* arg)
   while(1){
     int i, ret;
 
+    //本当に送りたいデータを受け取る前に
+    // そのデータのサイズを受け取る
     ret = socket_read(s, &size, sizeof(int));
     if ( ret <= 0 ) return NULL;
 
     if( size > 0 ) {
-
       pthread_mutex_lock( &g_mutex );
       {
         /*担当するクライアントから受信する*/
-	socket_read(s, buf, size);
+         socket_read(s, buf, size);
+         printf("Client%d: %s\n",new_client_index,buf);
 
-	printf("Client%d: %s\n",new_client_index,buf);
+         //メモリを\0で埋める
+         memset( messages[new_client_index], '\0',  strlen(buf)+1);
+         //受け取ったデータをmessagesに書き込む
+         strcpy( messages[new_client_index], buf);
 
-	memset( messages[new_client_index], '\0',  strlen(buf)+1);
-	strcpy( messages[new_client_index], buf);
-
-        /*全てのクライアントに受信データ送信する*/
-	for(i = 0; i < client_num; i++) {
-	  //受信元にはおくらない
-	  if (socket_list[i] == s) continue;
-
-	  if ( socket_write( socket_list[i], &size, sizeof(int) )  < 0 ) {
-            return NULL;
+         /*全てのクライアントに受信データ送信する*/
+         for(i = 0; i < client_num; i++) {
+           //受信元にはおくらない
+           if (socket_list[i] == s) continue;
+           if ( socket_write( socket_list[i], &size, sizeof(int) )  < 0 ) {
+             return NULL;
+           }
+           if ( socket_write( socket_list[i], buf, size ) < 0 ) {
+             return NULL;
+           }
           }
-          if ( socket_write( socket_list[i], buf, size ) < 0 ) {
-            return NULL;
-          }
-	}
+        }
+        pthread_mutex_unlock( &g_mutex );
       }
-      pthread_mutex_unlock( &g_mutex );
-    }
 
-  }
+    }
 
   return NULL;
 }
@@ -162,9 +164,7 @@ comm(void* arg)
 //-----------------------------------------------------------------------------------
 // thread_idle：アイドル時
 //-----------------------------------------------------------------------------------
-void*
-thread_idle(void* arg)
-{
+void* thread_idle(void* arg) {
   int size = 0;
   CvCapture *capture = (CvCapture *)arg;
 
@@ -198,6 +198,9 @@ thread_idle(void* arg)
     pthread_mutex_lock( &g_mutex );
     {
       for(i = 0; i < client_num; i++) {
+        //size=0の時は画像という決まりでクライント側もプログラムしている
+        //画像サイズがでかすぎるとsizeof(int)で表現しきれないからか？
+        //でかいサイズだと使うbitが多いから読み込みが遅い？
         socket_write( socket_list[i], &size, sizeof(int) );
         socket_write( socket_list[i], frame->imageData, frame->width*frame->height*(frame->depth/8)*frame->nChannels);
       }
@@ -212,9 +215,7 @@ thread_idle(void* arg)
 //-----------------------------------------------------------------------------------
 // main
 //-----------------------------------------------------------------------------------
-int
-main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   CvCapture *capture = NULL;
   IplImage *frame;
   int i, s, ns;
@@ -248,7 +249,7 @@ main(int argc, char *argv[])
   sin.sin_family = AF_INET; // アドレスの型の指定
   sin.sin_port = PORT; // ポート番号
   sin.sin_addr.s_addr = INADDR_ANY;
-//inet_addr("10.1.1.38"); // 待ち受けのIPアドレスの設定
+  //inet_addr("10.1.1.38"); // 待ち受けのIPアドレスの設定
 
   /* ソケットにパラメータを与える */
   if ((bind(s, (struct sockaddr *)&sin, sizeof(sin))) < 0) {

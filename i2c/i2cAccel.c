@@ -112,7 +112,7 @@ void adxl345_init(int fd){
   printf("adxl345 initialize seqence start\n");
   //adxl345のPOWER_CTLをMeasureモードに
   adxl345_write(POWER_CTL, 0x08, fd);
-  delay(10);
+  delay(10);sudo
   //測定範囲±16g
   adxl345_write(DATA_FORMAT, 0x03, fd);
   delay(10);
