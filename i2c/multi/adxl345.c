@@ -28,9 +28,9 @@ void adxl345_readData(float *accelData, int fd){
   int i;
   int rawData[3];
   float accuracy;
-  //測定範囲が±16gのとき
-  //10bitの2の補数表現で、先頭が符号ビットなので16.0 / 2^(10-1)
-  accuracy = 16.0 / 512;
+  //測定範囲が±4gのとき
+  //10bitの2の補数表現で、先頭が符号ビットなので4.0 / 2^(10-1)
+  accuracy = 4.0 / 512;
   for (i=0;i<6;i++){
     data[i] = i2c_read(0x32+i,fd);
   }
@@ -59,8 +59,8 @@ void adxl345_init(int fd){
   //adxl345のPOWER_CTLをMeasureモードに
   i2c_write(POWER_CTL, 0x08, fd);
   delay(10);
-  //測定範囲±16g
-  i2c_write(DATA_FORMAT, 0x03, fd);
+  //測定範囲±16:0x03 ±4:0x01
+  i2c_write(DATA_FORMAT, 0x01, fd);
   delay(10);
   //サンプリング周波数adxl345.h参照
   i2c_write(BW_RATE, 0x0A, fd);
