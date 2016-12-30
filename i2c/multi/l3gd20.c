@@ -8,16 +8,18 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <wiringPi.h> //delay関数用
 
 #include "i2c.h"
 #include "l3gd20.h"
 
 //L3GD20用ジャイロデータ読み出し用ルーチン
 //整数値配列へのポインタを使ってデータを読みだす
-void L3GD20_readData(int *gyroData, int fd){
+void L3GD20_readData(float *gyroData, int fd){
   unsigned char data[6];
   //センサから３軸に対して２バイトずつデータを読み出す
   int i;
+  int rawData[3];
   for (i=0;i<6;i++){
     data[i] = i2c_read(0x28+i,fd);
   }
@@ -28,9 +30,15 @@ void L3GD20_readData(int *gyroData, int fd){
   //(data[1]<<1 | data[0]) == 10(2bit) == 0010(4bit) == 2
   //(data[1]<<2 | data[0]<<1) >>1 == 10(2bit) == 1110(4bit) == 2
   //右シフトにより、左側の桁数を符号bitで埋められる
-  gyroData[0] = ((int)data[1]<<24|(int)data[0]<<16)>>16;
-  gyroData[1] = ((int)data[3]<<24|(int)data[2]<<16)>>16;
-  gyroData[2] = ((int)data[5]<<24|(int)data[4]<<16)>>16;
+  rawData[0] = ((int)data[1]<<24|(int)data[0]<<16)>>16;
+  rawData[1] = ((int)data[3]<<24|(int)data[2]<<16)>>16;
+  rawData[2] = ((int)data[5]<<24|(int)data[4]<<16)>>16;
+
+  //精度をかけて実際の値に補正する。
+  //initの仕方によって精度は変更可能
+  gyroData[0] = rawData[0]*0.00875;
+  gyroData[1] = rawData[1]*0.00875;
+  gyroData[2] = rawData[2]*0.00875;
   return;
 }
 
