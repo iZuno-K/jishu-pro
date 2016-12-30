@@ -19,8 +19,7 @@ int main(){
   char *i2cFileName = "/dev/i2c-1"; //リビジョンに合わせてかえること
   int i2cAddress[2];
   float gyroData[3]; //(x,y,z)
-  int accelData[3]; //(x,y,z)
-  float x1,y1,z1,x2,y2,z2;
+  float accelData[3]; //(x,y,z)
 
   //i2cデバイスファイルオープン
   i2c_open(&i2c_fd, i2cFileName);
@@ -45,7 +44,8 @@ int main(){
     adxl345_readData(accelData, i2c_fd);
 
     printf("(%5.2f, %5.2f, %5.2f)\n", gyroData[0],gyroData[1],gyroData[2]);
-    printf("(%d, %d, %d)\n", accelData[0],accelData[1],accelData[2]);
+    printf("(%5.2f, %5.2f, %5.2f)\n", accelData[0],accelData[1],accelData[2]);
+    delay(10);
   }
 
   return 0;

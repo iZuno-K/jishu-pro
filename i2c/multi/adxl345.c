@@ -22,10 +22,15 @@
 
 //adxl345用ジャイロデータ読み出し用ルーチン
 //整数値配列へのポインタを使ってデータを読みだす
-void adxl345_readData(int *accelData, int fd){
+void adxl345_readData(float *accelData, int fd){
   unsigned char data[6];
   //センサから３軸に対して２バイトずつデータを読み出す
   int i;
+  int rawData[3];
+  float accuracy;
+  //測定範囲が±16gのとき
+  //10bitの2の補数表現で、先頭が符号ビットなので16.0 / 2^(10-1)
+  accuracy = 16.0 / 512;
   for (i=0;i<6;i++){
     data[i] = i2c_read(0x32+i,fd);
   }
@@ -36,10 +41,15 @@ void adxl345_readData(int *accelData, int fd){
   //(data[1]<<1 | data[0]) == 10(2bit) == 0010(4bit) == 2
   //(data[1]<<2 | data[0]<<1) >>1 == 10(2bit) == 1110(4bit) == 2
   //右シフトにより、左側の桁数を符号bitで埋められる
-  accelData[0] = ((int)data[1]<<24|(int)data[0]<<16)>>16;
-  accelData[1] = ((int)data[3]<<24|(int)data[2]<<16)>>16;
-  accelData[2] = ((int)data[5]<<24|(int)data[4]<<16)>>16;
+  rawData[0] = ((int)data[1]<<24|(int)data[0]<<16)>>16;
+  rawData[1] = ((int)data[3]<<24|(int)data[2]<<16)>>16;
+  rawData[2] = ((int)data[5]<<24|(int)data[4]<<16)>>16;
+
+  accelData[0] = rawData[0] * accuracy;
+  accelData[1] = rawData[1] * accuracy;
+  accelData[2] = rawData[2] * accuracy;
   return;
+
 }
 
 //adxl345初期化ルーチン
