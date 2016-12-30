@@ -4,6 +4,9 @@
 #include <unistd.h>
 
 #include <linux/i2c-dev.h> //I2C用インクルード
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <stdint.h>
 
 #include "adxl345.h"
 #include "l3gd20.h"
@@ -13,7 +16,7 @@
 
 int main(){
   int i2c_fd; //i2cへのファイルディスクリプタ
-  char *FileName = "dev/i2c-1"; //リビジョンに合わせてかえること
+  char *i2cFileName = "dev/i2c-1"; //リビジョンに合わせてかえること
   int i2cAddress;
   int gyroData[3]; //(x,y,z)
   float x1,y1,z1,x2,y2,z2;
