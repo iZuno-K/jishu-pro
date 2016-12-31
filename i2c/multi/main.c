@@ -40,7 +40,7 @@ int main(){
   //スレーブアドレスをセットしてから読むこと
   int i,j;
   //offset検出
-  for (j=0,j<3;j++){
+  for (j=0;j<3;j++){
     gyrooffset[j] = 0;
     acceloffset[j]= 0;
   }
@@ -50,14 +50,14 @@ int main(){
     L3GD20_readData(gyroData, i2c_fd);
     i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
-    for (j=0,j<3;j++){
+    for (j=0;j<3;j++){
       gyrooffset[j] += gyroData[j];
       acceloffset[j]+= accelData[j];
     }
   }
-  for (j=0,j<3;j++){
-    gyrooffset[j] = gyrooffset / 100.0;
-    acceloffset[j]= acceloffset / 100.0;
+  for (j=0;j<3;j++){
+    gyrooffset[j] = gyrooffset[j] / 100.0;
+    acceloffset[j]= acceloffset[j] / 100.0;
   }
   acceloffset[2] -= 1.0; //重力の分
   printf("(%5.2f, %5.2f, %5.2f)\n", gyrooffset[0],gyrooffset[1],gyrooffset[2]);
