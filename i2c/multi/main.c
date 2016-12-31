@@ -84,7 +84,7 @@ int main(){
     for (j=0;j<3;j++){
       //cut of 0.001Hz sampling 0.1s
       outputGyro[j] = 1/(1+0.001*0.1)*(outputGyro[j] + gyroData[j] - pastGyro[j]);
-      outputAccel[j] = 1/(1+0.001*0.1)*(outputAccel[j] + accelData[j]);
+      outputAccel[j] = 1/(1+0.001*0.1)*(outputAccel[j] + 0.001*accelData[j]);
     }
 
     // printf("(%5.2f, %5.2f, %5.2f)\n", gyroData[0]-gyrooffset[0],gyroData[1]-gyrooffset[1],gyroData[2]-gyrooffset[2]);
