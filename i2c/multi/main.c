@@ -44,7 +44,8 @@ int main(){
     gyrooffset[j] = 0;
     acceloffset[j]= 0;
   }
-  最初100個の平均をoffsetとする
+
+  //最初100個の平均をoffsetとする
   for (i=0; i< 100; i++) {
     i2c_setAddress(&i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
