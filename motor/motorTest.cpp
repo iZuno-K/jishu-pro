@@ -10,11 +10,11 @@
 #define MOTOROUT1 14
 #define MOTOROUT2 15
 #define MOTORPWM 18
-#define POW 0
+#define POW 1024
 
 int main(void) {
 int i = 0;
-double time = 100000; //micro sec
+double time = 1000; //micro sec
 
   if ( wiringPiSetupGpio() == -1) {
     printf("setup error");
