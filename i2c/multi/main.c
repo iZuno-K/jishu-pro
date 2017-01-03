@@ -93,7 +93,7 @@ int main(){
     i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
 
-    if ((gyroData[2] > 0.5) || (gyroData[2] < -0.5)) {
+    if ((gyroData[2]-gyrooffset[2] > 0.5) || (gyroData[2]-gyrooffset[2] < -0.5)) {
       printf("detect\n");
       if (flag==0){
         digitalWrite(MOTOROUT1, 0);
@@ -101,13 +101,13 @@ int main(){
         pwm = 1000;
         pwmWrite(MOTORPWM, pwm);
         flag = 1;
+      } else {
+        digitalWrite(MOTOROUT2, 0);
+        digitalWrite(MOTOROUT1, 1);
+        pwm = 500;
+        pwmWrite(MOTORPWM,pwm);
+        flag = 0;
       }
-      else {
-      digitalWrite(MOTOROUT2, 0);
-      digitalWrite(MOTOROUT1, 1);
-      pwm = 500;
-      pwmWrite(MOTORPWM,pwm);
-      flag = 0;
     }
 
 
