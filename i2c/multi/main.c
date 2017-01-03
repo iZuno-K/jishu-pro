@@ -84,17 +84,19 @@ int main(){
   printf("(%5.2fg, %5.2fg, %5.2fg)\n", acceloffset[0],acceloffset[1],acceloffset[2]);
   delay(1000);
 
+
+  digitalWrite(MOTOROUT1, 1);
   for (i=0; i< 100; i++) {
     i2c_setAddress(&i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
     i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
 
-    if (gyroData[2] > 0.5) || (gyroData[2] < -0.5) {
+    if ((gyroData[2] > 0.5) || (gyroData[2] < -0.5)) {
       pwm = 1024;
       pwmWrite(MOTORPWM, pwm);
     } else {
-      pwm = 0;
+      pwm = -1024;
       pwmWrite(MOTORPWM,pwm);
     }
 
