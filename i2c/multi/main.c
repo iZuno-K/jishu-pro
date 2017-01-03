@@ -86,17 +86,22 @@ int main(){
 
 
   digitalWrite(MOTOROUT1, 1);
-  for (i=0; i< 100; i++) {
+  for (i=0; i< 1000; i++) {
     i2c_setAddress(&i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
     i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
 
     if ((gyroData[2] > 0.5) || (gyroData[2] < -0.5)) {
-      pwm = 1024;
+      pwm = 1000
+      digitalWrite(MOTOROUT1, 0);
+      digitalWrite(MOTOROUT2, 1);
       pwmWrite(MOTORPWM, pwm);
+      printf("detect\n");
     } else {
       pwm = 500;
+      digitalWrite(MOTOROUT2, 0);
+      digitalWrite(MOTOROUT1, 1);
       pwmWrite(MOTORPWM,pwm);
     }
 
@@ -109,6 +114,8 @@ int main(){
   }
 
   pwm = 0;
-  pwmWrite(MOTORPWM, pwm)
+  digitalWrite(MOTOROUT1, 0);
+  digitalWrite(MOTOROUT2, 0);
+  pwmWrite(MOTORPWM, pwm);
   return 0;
 }
