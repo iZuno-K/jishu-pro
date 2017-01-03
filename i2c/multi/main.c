@@ -96,7 +96,7 @@ int main(){
       pwm = 1024;
       pwmWrite(MOTORPWM, pwm);
     } else {
-      pwm = -1024;
+      pwm = 500;
       pwmWrite(MOTORPWM,pwm);
     }
 
@@ -108,5 +108,7 @@ int main(){
     delay(1);
   }
 
+  pwm = 0;
+  pwmWrite(MOTORPWM, pwm)
   return 0;
 }
