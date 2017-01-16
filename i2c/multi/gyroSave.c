@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #include <wiringPi.h>
 
@@ -23,8 +24,6 @@
 #define MOTOROUT2 15
 #define MOTORPWM 18
 
-void* motor_thread(void+ arg);
-
 int main(void){
   int i2c_fd; //i2cへのファイルディスクリプタ
   char *i2cFileName = "/dev/i2c-1"; //リビジョンに合わせてかえること
@@ -36,20 +35,26 @@ int main(void){
   float theta[3];
   float prevGyro[3];
   double filtergyroData[3];
+  double predict[3];
 
   unsigned int timer=0;
   float dt=0;
   float pwm=0; //pwm
   unsigned int start;
+  FILE *fp;
+  char *fname = "gyroData.csv";
+  float tempData[1];
+  float prevTemp;
+
+  float a[3],b[3],c[3]; //mpdel:dorift = ax+b
 
   float ms; //micros()
   float m=0.000001; //micro
   int flag = 1;
-  float passed;
 
   //PD制御
-  float kp=100.0,kd=5.0;
-  float y=30.0,dy=0.0;
+  float kp=300.0,kd=10.0;
+  float y=0.0,dy=0.0;
 
   //gpioピン初期設定
   if ( wiringPiSetupGpio() == -1) {
@@ -60,6 +65,14 @@ int main(void){
   pinMode(MOTOROUT2, OUTPUT);
   pinMode(MOTORPWM, PWM_OUTPUT);
 
+  fp = fopen( fname, "w" );
+  if( fp == NULL ){
+    printf( "%sファイルが開けません¥n", fname );
+    return -1;
+  }
+  else{
+    printf("fileOPEN\n");
+  }
 
   //i2cデバイスファイルオープン
   i2c_open(&i2c_fd, i2cFileName);
@@ -82,6 +95,9 @@ int main(void){
     gyrooffset[j] = 0.0;
     acceloffset[j]= 0.0;
     theta[j]=0.0;
+    a[j]=0.0;
+    b[j] = 0.0;
+    c[j]=0.0;
     filtergyroData[j]=0.0;
   }
 
@@ -121,6 +137,59 @@ int main(void){
   printf("(%5.2fg, %5.2fg, %5.2fg)\n", acceloffset[0],acceloffset[1],acceloffset[2]);
   delay(500);
 
+  //prevTemp init
+  i2c_setAddress(&i2c_fd, i2cAddress[0]);
+  L3GD20_tempRead(tempData, i2c_fd);
+  prevTemp = tempData[0];
+
+  //calibration　ドリフトの線形モデルを作る
+  double dif;
+  float passed;
+  unsigned int start2;
+  for (i = 0; i < 3; i++) {
+    prevGyro[i] = gyroData[i];
+    filtergyroData[i] = gyroData[i];
+  }
+
+  float learning_rate = 0.000005;
+  start = micros();
+  timer = micros();
+  while ((micros()-start)*m < 23.0) {
+    i2c_setAddress(&i2c_fd, i2cAddress[0]);
+    L3GD20_readData(gyroData, i2c_fd);
+    L3GD20_tempRead(tempData, i2c_fd);
+    i2c_setAddress(&i2c_fd, i2cAddress[1]);
+    adxl345_readData(accelData, i2c_fd);
+    ms = micros();
+    //はじめ５秒のデータは使わない
+    dt = (ms - timer)*m;
+    timer = ms;
+    if ((ms - start)*m < 5.0) {
+      delay(100);
+      continue;
+    }
+    passed = (ms - start)*m;
+    for (j=0;j<3;j++){
+      gyroData[j] -= gyrooffset[j];
+      //50Hz low pass
+      // gyroData[j] = prevGyro[j]*0.3679 + gyroData[j]*0.6321;
+      filtergyroData[j] = filtergyroData[j] + gyroData[j] - prevGyro[j]*0.999371878820;
+      prevGyro[j] = gyroData[j];
+      theta[j] += filtergyroData[j]*dt;
+      dif = a[j]*passed*passed + b[j]*passed - theta[j];
+      printf("dif[%d]: %lf\n",j,dif);
+      if ((dif<0.001) && (dif>-0.001)) continue;
+      a[j] -= learning_rate*dif*passed*passed;
+      b[j] -= learning_rate*dif*passed;
+      c[j] -= learning_rate*dif;
+    }
+    // delay(100);
+    printf("%1.9f\n",(ms-start)*m );
+  }
+
+
+
+  fprintf(fp, "time,theta_x,theta_y,theta_z,omega_x,omega_y,omega_z,temperature_dif,predict_x,predict_y,predict_z,%lf,%lf,%lf,%lf,%lf,%lf\n",a[0],a[1],a[2],b[0],b[1],b[2],c[0],c[1],c[2]);
   digitalWrite(MOTOROUT1, 1);
   flag=1;
   // start = micros();
@@ -131,12 +200,14 @@ int main(void){
   for (i=0; i< 10000; i++) {
     i2c_setAddress(&i2c_fd, i2cAddress[0]);
     L3GD20_readData(gyroData, i2c_fd);
+    L3GD20_tempRead(tempData, i2c_fd);
     i2c_setAddress(&i2c_fd, i2cAddress[1]);
     adxl345_readData(accelData, i2c_fd);
     ms = micros();
     dt = (ms - timer)*m;
+    passed = (ms - start)*m;
     timer = ms;
-    for (j=0;j<3;j++){ji
+    for (j=0;j<3;j++){
       gyroData[j] -= gyrooffset[j];
       //50Hz low pass
       // gyroData[j] = prevGyro[j]*0.3679 + gyroData[j]*0.6321;
@@ -144,16 +215,32 @@ int main(void){
       prevGyro[j] = gyroData[j];
       theta[j] += filtergyroData[j]*dt;
       // theta[j] += gyroData[j]*dt - a[j]*passed- b[j];
+      predict[j] = a[j]*passed*passed+b[j]*passed+c[j];
     }
 
 
     pwm = kp*(theta[2] - y) + kd*(filtergyroData[2] - dy);
     printf("%5.5f\n",pwm);
+    if (pwm > 0){
+        digitalWrite(MOTOROUT1, 1);
+        digitalWrite(MOTOROUT2, 0);
+        pwmWrite(MOTORPWM, pwm);
+      } else {
+        digitalWrite(MOTOROUT2, 1);
+        digitalWrite(MOTOROUT1, 0);
+        pwmWrite(MOTORPWM,-pwm);
+      }
+
 
     printf("Gyro: (%5.2f, %5.2f, %5.2f)\n", filtergyroData[0],filtergyroData[1],filtergyroData[2]);
     printf("Accel: (%2.5fg, %2.5fg, %2.5fg)\n", accelData[0],accelData[1],accelData[2]);
-    printf("Theta: (%5.5f, %5.5f, %5.5f)\n", theta[0],theta[1],theta[2]);
+    printf("Theta: (%5.5f, %5.5f, %5.5f)\n", theta[0]-predict[0],theta[1]-predict[1],theta[2]-predict[2]);
+    printf("predict: (%5.5f, %5.5f, %5.5f)\n", predict[0], predict[1], predict[2]);
+    fprintf(fp, "%1.9f,%5.5f,%5.5f,%5.5f,%5.5f,%5.5f,%5.5f,%2.0f,%5.5f,%5.5f,%5.5f\n",
+    (micros()-start)*m,theta[0],theta[1],theta[2],filtergyroData[0],filtergyroData[1],filtergyroData[2],tempData[0]-prevTemp,predict[0],predict[1],predict[2]);
     printf("Time: %1.9f\n", dt);
+    printf("temperature: %2.2f\n", tempData[0]);
+    prevTemp = tempData[0];
     // delay(1);
   }
 
@@ -161,26 +248,7 @@ int main(void){
   digitalWrite(MOTOROUT1, 0);
   digitalWrite(MOTOROUT2, 0);
   pwmWrite(MOTORPWM, pwm);
+  fclose(fp);
   printf("fileCLOSE\n");
   return ;
-}
-
-
-void* motor_thread(void* arg){
-
-  while (1) {
-    pthread_mutex_lock(&g_mutex):
-    {
-      if (pwm > 0){
-          digitalWrite(MOTOROUT1, 1);
-          digitalWrite(MOTOROUT2, 0);
-          pwmWrite(MOTORPWM, pwm);
-        } else {
-          digitalWrite(MOTOROUT2, 1);
-          digitalWrite(MOTOROUT1, 0);
-          pwmWrite(MOTORPWM,-pwm);
-        }
-    }
-    pthread_mutex_unlock(&g_mutex);
-  }
 }

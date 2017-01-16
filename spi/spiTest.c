@@ -1,72 +1,55 @@
 // gcc -o i2cGyro i2cGyro.c -lwiringPi
+#include <stdint.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <unistd.h>
-
-#include <linux/i2c-dev.h> //I2C用インクルード
+#include <getopt.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <stdint.h>
-#include <wiringPi.h> //delay関数用
+#include <linux/types.h>
+#include <linux/spi/spidev.h>
+#include <wiringPi.h>
 
 void L3GD20_readData(int *gyroData, int fd);
 void L3GD20_write(unsigned char address, unsigned char data, int fd);
 unsigned char L3GD20_read(unsigned char address, int fd);
 void L3GD20_init(int fd);
 
+static uint8_t SPIMode = 3,SPIbit=8;   //SPIモード3 bit数8
+static uint32_t SPISpeed = 250000;  // 250kHz
+// SPIデバイス定義
+// # ls -l /dev/spidev* で確認できる。
+// Pi2の場合CE1に接続した場合は0.0
+//          CE2に接続した場合は0.1 だった。
+static char *SPIDevice = "/dev/spidev0.0";
+int fd,ret=0;
+
 int main(int argc, char **argv){
-  int i2c_fd; //i2cへのファイルディスクプタ
-  char* i2cFileName = "/dev/i2c-1";//リビジョンに合わせて変更
   int i2cAddress = 0x6a;
   int gyroData[3]; //(x,y,z)
-  float x=0,y=0,z=0; //degree
-  FILE *fp;
-  char *fname = "gyroData.csv";
-  unsigned int timer=0;
-
 
   printf("i2c Gyro(L3GD20) test program\n");
   delay(500);
-  // I2Cデバイスファイルをオープン
-  if ((i2c_fd = open(i2cFileName, O_RDWR)) < 0){
-    printf("Faild to open i2c port\n");
-    exit(1);
-  }
-  //L3GD20用に設定
-  if((ioctl(i2c_fd, I2C_SLAVE, i2cAddress)) < 0){
-    printf("Unable to get bus access to talk to slave\n");
-    exit(1);
-  }
+
+  // wiringPi初期化
+  if(wiringPiSetup()==-1) printf("wiringPi初期化エラー\n");
+  // SPIデバイスの初期化
+  fd = open(SPIDevice,O_RDWR);if(fd<0) printf("SPI デバイス初期化エラー\n");
+  ret = ioctl(fd,SPI_IOC_WR_MODE,&SPIMode);if(ret <0) printf("SPI Mode設定エラー\n");
+  ret =ioctl(fd,SPI_IOC_WR_BITS_PER_WORD,&SPIbit);if(ret <0) printf("SPI bit/Word設定エラー\n");
+  ret =ioctl(fd,SPI_IOC_WR_MAX_SPEED_HZ,&SPISpeed);if(ret <0) printf("SPI Speed設定エラー\n");
+
   //デバイス初期化
-  L3GD20_init(i2c_fd);
-
-  fp = fopen( fname, "w" );
-  if( fp == NULL ){
-    printf( "%sファイルが開けません¥n", fname );
-    return -1;
-  }
-  //fprintf(fp, "%c,%c,%c\n",'x','y','z');
-  //１ms毎,２０回センサ情報取得
+  L3GD20_init(fd);
+  //１秒毎,２０回センサ情報取得
   int i;
-  unsigned int start;
-  float dt=0;
-  start = micros();
-  timer = micros();
-  for (i=0;i<10000;i++){
-    L3GD20_readData(gyroData, i2c_fd);
-    dt = (micros() - timer)*0.000001;
-    timer = micros();
+  for (i=0;i<40;i++){
+    L3GD20_readData(gyroData, fd);
     //データを校正して表示
-    x += (float)gyroData[0]*0.00875*dt;
-    y += (float)gyroData[1]*0.00875*dt;
-    z += (float)gyroData[2]*0.00875*dt;
-    printf("theta (x, y, z) = (%5.5f, %5.5f, %5.5f, passed:%3.5f) \n", x,y,z, (micros()-start)*0.000001);
-    fprintf(fp, "%lf,%lf,%lf,%lf \n", x,y,z, (micros()-start)*0.000001);
-    // delay(1);
+    printf("(x, y, z) = (%5.2f, %5.2f, %5.2f) \n",
+    (float)gyroData[0]*0.00875, (float)gyroData[1]*0.00875, (float)gyroData[2]*0.00875);
+    delay(100);
   }
-
-  fclose(fp);
   return;
 }
 
@@ -76,7 +59,7 @@ void L3GD20_write(unsigned char address, unsigned char data, int fd){
   unsigned char buf[2];
   buf[0] = address;
   buf[1] = data;
-    if ((write(fd, buf, 2)) != 2){
+  if ((write(fd, buf, 2)) != 2){
     printf("Error writing to i2c slave\n");
     exit(1);
   }

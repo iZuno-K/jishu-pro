@@ -1,4 +1,4 @@
-all: niconico_server niconico_client
+all: niconico_server niconico_client clientTest serverTest
 
 #OPENCV_CFLAGS = `pkg-config opencv-2.3.1 --cflags`
 #OPENCV_LIBS   = `pkg-config opencv-2.3.1 --libs`
@@ -16,4 +16,10 @@ miconClient: miconClient.c
 cvtest: cvtest.cpp
 	g++ -o $@ $< ${OPENCV_CFLAGS} ${OPENCV_LIBS}
 niconico_client: niconico_client.c
+	gcc -pthread -o $@ $< ${OPENCV_CFLAGS} ${OPENCV_LIBS} ${GLUT_CFLAGS} ${GLUT_LIBS}
+
+
+serverTest: serverTest.c
+	g++ -pthread -o $@ $< ${OPENCV_CFLAGS} ${OPENCV_LIBS}
+clientTest: clientTest.c
 	gcc -pthread -o $@ $< ${OPENCV_CFLAGS} ${OPENCV_LIBS} ${GLUT_CFLAGS} ${GLUT_LIBS}
