@@ -6,6 +6,10 @@ CC = gcc
 CC2 = g++
 LDFLAGS = -lwiringPi
 OPENCV = -I/usr/local/include/opencv -lpthread -ldl -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_video -lopencv_contrib -lopencv_legacy -lm
+PC_OPENCV_CFLAGS = `pkg-config opencv --cflags`
+PC_OPENCV_LIBS   = `pkg-config opencv --libs`
+GLUT_CFLAGS   = `pkg-config gl --cflags` `pkg-config glu --cflags`
+GLUT_LIBS     = `pkg-config gl --libs` `pkg-config glu --libs` -lglut
 
 main2:$(OBJS2)
 	$(CC) -o $@ $(OBJS2) $(LDFLAGS)
@@ -43,6 +47,9 @@ adxl345_wiringPi.o:adxl345_wiringPi.c adxl345_wiringPi.h
 
 motorTest:motorTest.c
 	$(CC) -o $@ $< $(LDFLAGS)
+
+clientTest: clientTest.c
+	gcc -pthread -o $@ $< ${PC_OPENCV_CFLAGS} ${PC_OPENCV_LIBS} ${GLUT_CFLAGS} ${GLUT_LIBS}
 
 clean:
 	$(RM) $(OBJS)
